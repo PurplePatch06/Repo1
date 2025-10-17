@@ -1,17 +1,17 @@
-# cazador.py
+# cazador.py - Versión simplificada usando [x, y]
 
 import mapa
 import heapq
 
 class Cazador:
-    def __init__(self, posicion_inicial):
-        self.posicion = tuple(posicion_inicial)  # (fila, col)
+    def _init_(self, posicion_inicial):
+        self.posicion = list(posicion_inicial)  # [x, y]
         self.ruta = []
         self.objetivo = None
 
     def actualizar_objetivo(self, nueva_pos):
-        if nueva_pos != self.objetivo:
-            self.objetivo = tuple(nueva_pos)
+        if list(nueva_pos) != self.objetivo:
+            self.objetivo = list(nueva_pos)
             self.ruta = self.a_star(self.posicion, self.objetivo)
 
     def mover(self):
@@ -19,11 +19,11 @@ class Cazador:
             self.posicion = self.ruta.pop(0)
 
     def esta_cerca_jugador(self, jugador_pos):
-        return self.posicion == tuple(jugador_pos)
+        return self.posicion == list(jugador_pos)
 
     def a_star(self, inicio, objetivo):
         open_set = []
-        heapq.heappush(open_set, (0, 0, inicio, []))
+        heapq.heappush(open_set, (0, 0, tuple(inicio), []))
         visited = set()
 
         def heuristica(a, b):
@@ -32,32 +32,37 @@ class Cazador:
         while open_set:
             f_score, g_score, actual, camino = heapq.heappop(open_set)
 
-            if actual == objetivo:
-                return camino + [objetivo]
+            if list(actual) == objetivo:
+                return camino + [list(objetivo)]
 
             if actual in visited:
                 continue
             visited.add(actual)
 
-            for vecino in self.obtener_vecinos(actual):
-                if vecino in visited:
+            for vecino in self.obtener_vecinos(list(actual)):
+                vecino_tupla = tuple(vecino)
+                if vecino_tupla in visited:
                     continue
                 nuevo_g = g_score + 1
-                nuevo_f = nuevo_g + heuristica(vecino, objetivo)
-                heapq.heappush(open_set, (nuevo_f, nuevo_g, vecino, camino + [actual]))
+                nuevo_f = nuevo_g + heuristica(vecino_tupla, tuple(objetivo))
+                heapq.heappush(
+                    open_set,
+                    (nuevo_f, nuevo_g, vecino_tupla, camino + [list(actual)]),
+                )
 
         return []
 
     def obtener_vecinos(self, nodo):
-        fila, col = nodo
+        x, y = nodo
         posibles = [
-            (fila - 1, col),
-            (fila + 1, col),
-            (fila, col - 1),
-            (fila, col + 1),
+            [x, y - 1],  # Arriba
+            [x, y + 1],  # Abajo
+            [x - 1, y],  # Izquierda
+            [x + 1, y],  # Derecha
         ]
         vecinos_validos = []
-        for f, c in posibles:
-            if mapa.es_caminable(f, c) or (f, c) == self.objetivo:
-                vecinos_validos.append((f, c))
+        for pos in posibles:
+            # 🔹 mapa.es_caminable espera (fila, col) = (y, x)
+            if mapa.es_caminable(pos[1], pos[0]) or pos == self.objetivo:
+                vecinos_validos.append(pos)
         return vecinos_validos

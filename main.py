@@ -23,7 +23,7 @@ from config import (
 def main():
     pygame.init()
     pantalla = pygame.display.set_mode((ANCHO, ALTO + ALTURA_TOOLBAR))
-    pygame.display.set_caption("Juego con Voz y Cazador")
+    pygame.display.set_caption("Juego de Voz y Cazador")
     reloj = pygame.time.Clock()
     fuente = pygame.font.SysFont("Arial", 20)
 
@@ -35,33 +35,62 @@ def main():
     idioma_actual = idiomas[indice_idioma]
     voz.set_idioma(idioma_actual)
 
+    # 🔹 Generar laberinto inicial
+    #mapa.mapa = mapa.generar_mapa_aleatorio(15, 15)
+
     # Inicializar cazador
     cazador_instancia = cazador.Cazador(POS_INICIAL_CAZADOR)
     tiempo_ultima_actualizacion = time.time()
 
+    # Flag para mostrar mensaje de victoria
+    ganador = False
+    tiempo_ganador = 0
+
+    # --- Bucle principal ---
     while True:
         pantalla.fill((0, 0, 0))
 
+        # --- Dibujar ---
         dibujo.dibujar_toolbar(pantalla, fuente, idioma_actual)
         dibujo.dibujar_tablero(pantalla, mapa.mapa)
         dibujo.dibujar_jugador(pantalla, jugador.jugador_pos)
         dibujo.dibujar_cazador(pantalla, cazador_instancia.posicion)
+        
+        # Mostrar mensaje de victoria si corresponde
+        if ganador and pygame.time.get_ticks() - tiempo_ganador < 1000:
+            texto = fuente.render("¡Has ganado!", True, (255, 255, 0))
+            pantalla.blit(texto, (ANCHO//2 - 60, ALTO//2))
+        elif ganador:
+            ganador = False  # Desactivar mensaje
 
-        # Movimiento por voz
+        # --- Movimiento por voz ---
         comando = voz.get_comando()
         if comando:
             victoria = jugador.mover_jugador_direccion(comando)
             if victoria:
+                ganador = True
+                tiempo_ganador = pygame.time.get_ticks()
+
+                # Generar nuevo laberinto válido
+                nuevo_mapa = mapa.generar_mapa_aleatorio(15, 15)
+
+                # Sobrescribir in-place el mapa existente
+                for y in range(len(mapa.mapa)):
+                    for x in range(len(mapa.mapa[0])):
+                        mapa.mapa[y][x] = nuevo_mapa[y][x]
+
+                # Reiniciar posiciones
+                jugador.jugador_pos = [1, 1]
                 cazador_instancia.posicion = POS_INICIAL_CAZADOR
                 cazador_instancia.ruta = []
 
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                voz.detener()
-                pygame.quit()
-                sys.exit()
+        # --- Movimiento por teclado ---
+        # Mover cazador constantemente
+        cazador_instancia.actualizar_objetivo(jugador.jugador_pos)
+        cazador_instancia.mover()
 
-            elif evento.type == pygame.KEYDOWN and not comando:
+        for evento in pygame.event.get():
+            if evento.type == pygame.KEYDOWN:
                 teclas = {
                     pygame.K_UP: "up",
                     pygame.K_DOWN: "down",
@@ -69,38 +98,31 @@ def main():
                     pygame.K_RIGHT: "right"
                 }
                 if evento.key in teclas:
-                    victoria = jugador.mover_jugador_direccion(teclas[evento.key])
+                    direccion = teclas[evento.key]
+                    victoria = jugador.mover_jugador_direccion(direccion)
+
                     if victoria:
+                        ganador = True
+                        tiempo_ganador = pygame.time.get_ticks()
+
+                        # Generar nuevo laberinto válido
+                        nuevo_mapa = mapa.generar_mapa_aleatorio(15, 15)
+
+                        # Sobrescribir in-place
+                        for y in range(len(mapa.mapa)):
+                            for x in range(len(mapa.mapa[0])):
+                                mapa.mapa[y][x] = nuevo_mapa[y][x]
+
+                        # Reiniciar posiciones
+                        jugador.jugador_pos = [1, 1]
                         cazador_instancia.posicion = POS_INICIAL_CAZADOR
                         cazador_instancia.ruta = []
 
-            elif evento.type == pygame.MOUSEBUTTONDOWN:
-                if evento.pos[0] >= ANCHO - 80:  # Botón salir
-                    voz.detener()
-                    pygame.quit()
-                    sys.exit()
-                elif 10 <= evento.pos[0] <= 160:  # Cambiar idioma
-                    indice_idioma = (indice_idioma + 1) % len(idiomas)
-                    idioma_actual = idiomas[indice_idioma]
-                    voz.set_idioma(idioma_actual)
 
-        # Actualizar objetivo del cazador cada 3 segundos
-        if time.time() - tiempo_ultima_actualizacion > 3:
-            cazador_instancia.actualizar_objetivo(jugador.jugador_pos)
-            tiempo_ultima_actualizacion = time.time()
-
-        # Mover cazador 1 paso por frame
-        cazador_instancia.mover()
-
-        # Si el cazador atrapa al jugador
-        if cazador_instancia.esta_cerca_jugador(jugador.jugador_pos):
-            print("[CAZADOR] El jugador fue atrapado. Reiniciando posición...")
-            jugador.jugador_pos = list(POS_INICIAL_JUGADOR)
-            cazador_instancia.posicion = POS_INICIAL_CAZADOR
-            cazador_instancia.ruta = []
 
         pygame.display.flip()
         reloj.tick(FPS)
+
 
 if __name__ == "__main__":
     main()
