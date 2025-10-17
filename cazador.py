@@ -4,21 +4,22 @@ import mapa
 import heapq
 
 class Cazador:
-    def _init_(self, posicion_inicial):
+    def __init__(self, posicion_inicial):
         self.posicion = list(posicion_inicial)  # [x, y]
         self.ruta = []
         self.objetivo = None
 
     def actualizar_objetivo(self, nueva_pos):
-        if list(nueva_pos) != self.objetivo:
-            self.objetivo = list(nueva_pos)
+        nueva_pos_lista = list(nueva_pos)
+        if nueva_pos_lista != self.objetivo:
+            self.objetivo = nueva_pos_lista
             self.ruta = self.a_star(self.posicion, self.objetivo)
 
     def mover(self):
         if self.ruta:
             self.posicion = self.ruta.pop(0)
 
-    def esta_cerca_jugador(self, jugador_pos):
+    def atrapo_jugador(self, jugador_pos):
         return self.posicion == list(jugador_pos)
 
     def a_star(self, inicio, objetivo):
@@ -53,16 +54,16 @@ class Cazador:
         return []
 
     def obtener_vecinos(self, nodo):
-        x, y = nodo
+        fila, col = nodo
         posibles = [
-            [x, y - 1],  # Arriba
-            [x, y + 1],  # Abajo
-            [x - 1, y],  # Izquierda
-            [x + 1, y],  # Derecha
+            [fila - 1, col],  # Arriba
+            [fila + 1, col],  # Abajo
+            [fila, col - 1],  # Izquierda
+            [fila, col + 1],  # Derecha
         ]
         vecinos_validos = []
         for pos in posibles:
-            # 🔹 mapa.es_caminable espera (fila, col) = (y, x)
-            if mapa.es_caminable(pos[1], pos[0]) or pos == self.objetivo:
+            # mapa.es_caminable espera (fila, col)
+            if mapa.es_caminable(pos[0], pos[1]) or pos == self.objetivo:
                 vecinos_validos.append(pos)
         return vecinos_validos

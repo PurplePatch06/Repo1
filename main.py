@@ -88,6 +88,13 @@ def main():
         # Mover cazador constantemente
         cazador_instancia.actualizar_objetivo(jugador.jugador_pos)
         cazador_instancia.mover()
+        
+        # Verificar si el cazador atrapó al jugador
+        if cazador_instancia.atrapo_jugador(jugador.jugador_pos):
+            # Reiniciar posiciones
+            jugador.jugador_pos = [1, 1]
+            cazador_instancia.posicion = POS_INICIAL_CAZADOR
+            cazador_instancia.ruta = []
 
         for evento in pygame.event.get():
             if evento.type == pygame.KEYDOWN:
